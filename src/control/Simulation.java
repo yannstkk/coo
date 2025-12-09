@@ -45,7 +45,7 @@ public class Simulation {
                 Vehicule v = new ClassicBicycle(basePrice);
 
                 if (random.nextBoolean()) {
-                    v = new Basket(v); // Basket prend un Vehicule en paramètre → OK
+                    v = new Basket(v); 
                 }
 
                 s.parkVehicule(v);
