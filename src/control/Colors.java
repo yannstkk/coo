@@ -8,6 +8,7 @@ public class Colors {
     private String BLUE = "\u001B[34m";
     private String RED = "\u001B[31m";
     private String PURPLE = "\u001B[35m";
+    private String CYAN = "\u001B[36m";
     private String ORANGE = "\u001B[38;5;208m";
 
     public String getReset() {
@@ -34,8 +35,11 @@ public class Colors {
         return PURPLE;
     }
 
+    public String getCyan() {
+        return CYAN;
+    }
+
     public String getOrange() {
         return ORANGE;
     }
-
 }

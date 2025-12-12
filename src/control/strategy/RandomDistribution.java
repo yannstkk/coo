@@ -3,6 +3,7 @@ package control.strategy;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import control.Colors;
 import control.Station;
 import vehicle.Vehicule;
 import vehicle.state.ParkedState;
@@ -10,6 +11,7 @@ import vehicle.state.ParkedState;
 public class RandomDistribution implements Distribution {
 
     private final Random random = new Random();
+    private Colors colors = new Colors();
 
     @Override
     public void distribute(List<Station> stations) {
@@ -36,7 +38,6 @@ public class RandomDistribution implements Distribution {
                 .collect(Collectors.toList());
 
         if (sourceStations.isEmpty()) {
-            System.out.println("\u001B[31m[Random] Impossible de redistribuer : aucune station source disponible\u001B[0m");
             return;
         }
 
@@ -46,7 +47,7 @@ public class RandomDistribution implements Distribution {
         for (Station source : sourceStations) {
             if (toMove.size() >= totalNeeded) break;
 
-            int toTake = Math.min(3, source.getNbOccupiedSlot() - 2); // Garde au moins 2
+            int toTake = Math.min(3, source.getNbOccupiedSlot() - 2);
             
             for (int i = 0; i < toTake && toMove.size() < totalNeeded; i++) {
                 Vehicule v = source.removeVehiculeForRedistribution();
@@ -57,7 +58,6 @@ public class RandomDistribution implements Distribution {
         }
 
         if (toMove.isEmpty()) {
-            System.out.println("\u001B[31m[Random] Aucun vélo disponible pour redistribution\u001B[0m");
             return;
         }
 
@@ -66,8 +66,8 @@ public class RandomDistribution implements Distribution {
             target.parkVehicule(v);
         }
 
-        System.out.println("\u001B[33m[Random] " + toMove.size() + " vélo(s) redistribué(s) vers " + 
-                         emptyStations.size() + " station(s) vide(s)\u001B[0m");
+        System.out.println("  " + colors.getGreen() + toMove.size() + " vélo(s) redistribué(s) vers " + 
+                         emptyStations.size() + " station(s)" + colors.getReset());
     }
 
     private void redistributeFromFull(List<Station> fullStations, List<Station> allStations) {
@@ -95,6 +95,6 @@ public class RandomDistribution implements Distribution {
             target.parkVehicule(v);
         }
 
-        System.out.println("\u001B[33m[Random] " + toMove.size() + " vélo(s) redistribué(s)\u001B[0m");
+        System.out.println("  " + colors.getGreen() + toMove.size() + " vélo(s) redistribué(s)" + colors.getReset());
     }
 }

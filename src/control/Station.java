@@ -8,7 +8,7 @@ import vehicle.Vehicule;
 import vehicle.state.InUseState;
 import vehicle.state.ParkedState;
 import vehicle.state.StolenState;
-import vehicle.state.UnderRepairState;;
+import vehicle.state.UnderRepairState;
 
 public class Station {
     private int id;
@@ -21,9 +21,7 @@ public class Station {
     private Colors colors = new Colors();
 
     public Station(int id, int capacity) {
-
         this.id = id;
-
         this.capacity = capacity;
 
         for (int i = 0; i < capacity; i++) {
@@ -31,20 +29,15 @@ public class Station {
         }
     }
 
-    //////////////////////////////////////////////
-
     public void attach(Observer observer) {
         observers.add(observer);
     }
 
     private void notifyObservers(String action) {
-
         for (Observer o : observers) {
             o.update(this, action);
         }
     }
-
-    //////////////////////// on fait s'abonner un observeur
 
     public boolean isEmpty() {
         return getNbOccupiedSlot() == 0;
@@ -55,19 +48,12 @@ public class Station {
     }
 
     public int getNbOccupiedSlot() {
-
         int count = 0;
-
         for (Slot slot : slotList) {
             if (slot.getIsOccupied())
                 count++;
         }
-
         return count;
-    } // Retourne le nombre d'emplacements occupé
-
-    public int getCapacity() {
-        return capacity;
     }
 
     private void resetCountersIfChanged() {
@@ -87,52 +73,51 @@ public class Station {
         return slotList;
     }
 
-    public void parkVehicule(Vehicule vehicule) {
+    public int getCapacity() {
+        return capacity;
+    }
 
+    public void parkVehicule(Vehicule vehicule) {
+        parkVehiculeWithMessage(vehicule);
+    }
+    
+    public String parkVehiculeWithMessage(Vehicule vehicule) {
         if (!isFull() && !(vehicule.getVehiculeState() instanceof UnderRepairState)
                 && !(vehicule.getVehiculeState() instanceof StolenState)) {
 
             for (Slot slot : slotList) {
-
                 if (!slot.getIsOccupied()) {
-
                     slot.setActualVehicule(vehicule);
                     slot.setIsOccupied(true);
                     vehicule.setState(new ParkedState(vehicule));
                     notifyObservers("park");
                     resetCountersIfChanged();
 
-                    System.out.println(colors.getOrange() + "le Vélo dont l'ID " + vehicule.getId()
-                            + " vient d'être garé à la station " + this.id
-                            + " --> son nombre de locations totales reste : " + vehicule.getLocationNb()
-                            + colors.getReset());
-
-                    break;
+                    return colors.getGreen() + "Vélo #" + vehicule.getId() + 
+                        " garé à la Station " + this.id + 
+                        " (" + vehicule.getLocationNb() + " location(s))" + colors.getReset();
                 }
             }
         }
-    } // Ajoute un véhicule dans un emplacement libre.
+        return null;
+    }
 
-    public Vehicule rentVehicule() {
-
+    public String rentVehicule() {
         if (!isEmpty()) {
-
             for (Slot slot : slotList) {
-
                 if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
-
-                    Vehicule v = slot.getActualVehicule(); // retourne le velo qui garee a cet emplacement
+                    Vehicule v = slot.getActualVehicule();
                     slot.setActualVehicule(null);
                     slot.setIsOccupied(false);
                     v.setState(new InUseState(v));
                     v.incrementLocationNb();
 
-                    System.out.println(colors.getBlue() + "le Vélo dont l'ID " + v.getId()
-                            + " viens d'etre loué --> son nombre de location totale vaut : " + v.getLocationNb()
-                            + colors.getReset());
                     notifyObservers("rent");
                     resetCountersIfChanged();
-                    return v;
+                    
+                    return colors.getBlue() + "Vélo #" + v.getId() + 
+                        " loué depuis la Station " + this.id + 
+                        " (" + v.getLocationNb() + " location(s))" + colors.getReset();
                 }
             }
         }
@@ -140,19 +125,14 @@ public class Station {
     }
 
     public Vehicule removeVehiculeForRedistribution() {
-
         if (!isEmpty()) {
-
             for (Slot slot : slotList) {
-
                 if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
-
                     Vehicule v = slot.getActualVehicule();
                     slot.setActualVehicule(null);
                     slot.setIsOccupied(false);
                     notifyObservers("redistribute_remove");
                     resetCountersIfChanged();
-
                     return v;
                 }
             }
@@ -160,46 +140,39 @@ public class Station {
         return null;
     }
 
-    public void verifyStolen() {
-    if (getNbOccupiedSlot() == 1) {
-        Slot slot = slotList.stream().filter(Slot::getIsOccupied).findFirst().orElse(null);
+    public String verifyStolen() {
+        if (getNbOccupiedSlot() == 1) {
+            Slot slot = slotList.stream().filter(Slot::getIsOccupied).findFirst().orElse(null);
 
-        if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
-            IntervalsOfTheft++;
+            if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
+                IntervalsOfTheft++;
 
-            System.out.println(colors.getRed() + "la station dont l'id est " + id
-                    + " : vient d'avoir un velo rester seul pendant " + IntervalsOfTheft + " interval(s) de temps " +
-                    " le Compteur de vol a donc été incrementé, il vaut = " + IntervalsOfTheft + colors.getReset());
-
-            if (IntervalsOfTheft >= 2) {
-                Vehicule v = slot.getActualVehicule();
-                System.out.println(colors.getRed() + "⚠️ la Station dont l'id est " + id
-                        + " vient de se faire voler le Vélo : " + v.getId() + " !" + colors.getReset());
-
-                v.setState(new StolenState(v));
-                slot.setActualVehicule(null);
-                slot.setIsOccupied(false);
-                notifyObservers("stolen");
+                if (IntervalsOfTheft >= 2) {
+                    Vehicule v = slot.getActualVehicule();
+                    
+                    v.setState(new StolenState(v));
+                    slot.setActualVehicule(null);
+                    slot.setIsOccupied(false);
+                    notifyObservers("stolen");
+                    IntervalsOfTheft = 0;
+                    
+                    return colors.getRed() + "VOL : Vélo #" + v.getId() + 
+                        " volé à la Station " + id + colors.getReset();
+                }
+            } else {
+                // Vélo pas garé (en réparation ou autre), pas de vol possible
                 IntervalsOfTheft = 0;
             }
         } else {
-            // Vélo pas garé (en cours de retrait), pas de vol possible
+            // Plus d'un vélo ou station vide
             IntervalsOfTheft = 0;
         }
-    } else if (getNbOccupiedSlot() == 0) {
-        // Station vide, réinitialiser le compteur
-        IntervalsOfTheft = 0;
-    } else {
-        // Plus d'un vélo, pas de risque de vol
-        IntervalsOfTheft = 0;
+        return null;
     }
-}
 
     public void incrementEmptyFullCounters() {
-
         if (isEmpty()) {
             emptyIntervals++;
-
         } else {
             emptyIntervals = 0;
         }
@@ -209,12 +182,7 @@ public class Station {
         } else {
             fullIntervals = 0;
         }
-
-        // System.out.println("Station dont l'id est " + id + " est vide depuis = " +
-        // emptyIntervals + " interval, sinon est pleine depuis = " + fullIntervals + "
-        // interval, elle est occupe par = " + getNbOccupiedSlot() + "velos, et a pour
-        // capacite : " + getCapacity());
-    }// incrémente les compteurs vide ou plein
+    }
 
     public boolean needsRedistribution() {
         return emptyIntervals > 2 || fullIntervals > 2;
@@ -225,5 +193,4 @@ public class Station {
                 .filter(slot -> slot.getIsOccupied())
                 .count();
     }
-
 }

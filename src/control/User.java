@@ -3,15 +3,11 @@ package control;
 import control.strategy.Slot;
 import exceptions.CannotParkException;
 import vehicle.Vehicule;
+import vehicle.state.InUseState;
 import vehicle.state.ParkedState;
 
 public class User {
     private double balance;
-
-    public double getBalance() {
-        return balance;
-    }
-
     private Vehicule rentedVehicule;
 
     public User(String firstName, String lastName, double balance) {
@@ -19,45 +15,50 @@ public class User {
         this.rentedVehicule = null;
     }
 
-    public void rent(Station station) throws CannotParkException {
-    if (rentedVehicule != null || station.isEmpty()) {
-        return;
+    public double getBalance() {
+        return balance;
     }
-    
-    Vehicule vehicule = station.rentVehicule();
-    
-    if (vehicule != null) {
+
+    public String rent(Station station) throws CannotParkException {
+        if (rentedVehicule != null || station.isEmpty()) {
+            return null;
+        }
+        
+        // Trouver un vélo disponible
+        Vehicule vehicule = null;
+        for (Slot slot : station.getSlotList()) {
+            if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
+                vehicule = slot.getActualVehicule();
+                break;
+            }
+        }
+        
+        if (vehicule == null) {
+            return null;
+        }
+        
         double price = vehicule.getPrice();
         
         if (this.balance >= price) {
             this.balance -= price;
+            String result = station.rentVehicule();
             this.rentedVehicule = vehicule;
+            return result;
         } else {
-            System.out.println(" Pas assez d'argent, vélo remis en place");
-            
-            // Remet le vélo directement dans le slot sans passer par parkVehicule()
-            for (Slot slot : station.getSlotList()) {
-                if (!slot.getIsOccupied()) {
-                    slot.setActualVehicule(vehicule);
-                    slot.setIsOccupied(true);
-                    vehicule.setState(new ParkedState(vehicule));
-                    break;
-                }
-            }
+            // Pas assez d'argent
+            return null;
         }
     }
-}
 
-
-
-    public void park(Station s) throws CannotParkException {
+    public String park(Station s) throws CannotParkException {
         if (rentedVehicule != null && !s.isFull()) {
-            s.parkVehicule(rentedVehicule);
+            String result = s.parkVehiculeWithMessage(rentedVehicule);
             this.rentedVehicule = null;
+            return result;
         }
+        return null;
     }
 
-    // Getters
     public Vehicule getRentedVehicule() {
         return rentedVehicule;
     }
