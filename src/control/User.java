@@ -1,7 +1,9 @@
 package control;
 
+import control.strategy.Slot;
 import exceptions.CannotParkException;
 import vehicle.Vehicule;
+import vehicle.state.ParkedState;
 
 public class User {
     private double balance;
@@ -17,20 +19,36 @@ public class User {
         this.rentedVehicule = null;
     }
 
-    public void rent(Station station) throws CannotParkException, IllegalStateException {
-        if (rentedVehicule == null && !station.isEmpty()) {
-            Vehicule vehicule = station.rentVehicule();
-            if (vehicule != null) {
-                double price = vehicule.getPrice();
-                if (this.balance >= price) {
-                    this.balance -= price;
-                    this.rentedVehicule = vehicule;
-                } else {
-                    station.parkVehicule(vehicule);
+    public void rent(Station station) throws CannotParkException {
+    if (rentedVehicule != null || station.isEmpty()) {
+        return;
+    }
+    
+    Vehicule vehicule = station.rentVehicule();
+    
+    if (vehicule != null) {
+        double price = vehicule.getPrice();
+        
+        if (this.balance >= price) {
+            this.balance -= price;
+            this.rentedVehicule = vehicule;
+        } else {
+            System.out.println(" Pas assez d'argent, vélo remis en place");
+            
+            // Remet le vélo directement dans le slot sans passer par parkVehicule()
+            for (Slot slot : station.getSlotList()) {
+                if (!slot.getIsOccupied()) {
+                    slot.setActualVehicule(vehicule);
+                    slot.setIsOccupied(true);
+                    vehicule.setState(new ParkedState(vehicule));
+                    break;
                 }
             }
         }
     }
+}
+
+
 
     public void park(Station s) throws CannotParkException {
         if (rentedVehicule != null && !s.isFull()) {

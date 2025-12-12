@@ -1,3 +1,4 @@
+// src/control/strategy/RoundRobin.java
 package control.strategy;
 
 import java.util.*;
@@ -13,10 +14,56 @@ public class RoundRobin implements Distribution {
     public void distribute(List<Station> stations) {
         Colors colors = new Colors();
 
+        List<Station> emptyStations = new ArrayList<>();
+        for (Station s : stations) {
+            if (s.isEmpty()) {
+                emptyStations.add(s);
+            }
+        }
+
+        if (emptyStations.isEmpty()) {
+            redistributeFromFull(stations, colors);
+            return;
+        }
+
+        List<Vehicule> velosADeplacer = new ArrayList<>();
+        
+        for (Station station : stations) {
+            if (!station.isEmpty() && station.getNbOccupiedSlot() > 2) {
+                int toTake = Math.min(3, station.getNbOccupiedSlot() - 2);
+                
+                for (int i = 0; i < toTake; i++) {
+                    Vehicule velo = station.removeVehiculeForRedistribution();
+                    if (velo != null && velo.getVehiculeState() instanceof ParkedState) {
+                        velosADeplacer.add(velo);
+                    }
+                }
+            }
+        }
+
+        if (velosADeplacer.isEmpty()) {
+            System.out.println(colors.getRed() + 
+                "RoundRobin : Aucun vélo disponible pour redistribution" + 
+                colors.getReset());
+            return;
+        }
+
+        for (int i = 0; i < velosADeplacer.size(); i++) {
+            int indexStation = i % emptyStations.size();
+            Station stationCible = emptyStations.get(indexStation);
+            stationCible.parkVehicule(velosADeplacer.get(i));
+        }
+
+        System.out.println(colors.getYellow() + 
+            "[RoundRobin] " + velosADeplacer.size() + " vélo(s) redistribué(s) vers " + 
+            emptyStations.size() + " station(s) vide(s)" + 
+            colors.getReset());
+    }
+
+    private void redistributeFromFull(List<Station> stations, Colors colors) {
         List<Vehicule> velosADeplacer = new ArrayList<>();
 
         for (Station station : stations) {
-
             if (station.isFull()) {
                 Vehicule velo;
                 while ((velo = station.removeVehiculeForRedistribution()) != null) {
@@ -38,7 +85,8 @@ public class RoundRobin implements Distribution {
             }
         }
 
-        stationsDisponibles.sort((s1, s2) -> Integer.compare(s1.getNbOccupiedSlot(), s2.getNbOccupiedSlot()));
+        stationsDisponibles.sort((s1, s2) -> 
+            Integer.compare(s1.getNbOccupiedSlot(), s2.getNbOccupiedSlot()));
 
         if (stationsDisponibles.isEmpty()) {
             System.out.println("RoundRobin : impossible, toutes les stations sont pleines");
@@ -51,7 +99,8 @@ public class RoundRobin implements Distribution {
             stationCible.parkVehicule(velosADeplacer.get(i));
         }
 
-        System.out.println(
-                colors.getYellow() + "[RoundRobin] " + velosADeplacer.size() + " vélo redistribué" + colors.getReset());
+        System.out.println(colors.getYellow() + 
+            "[RoundRobin] " + velosADeplacer.size() + " vélo(s) redistribué(s)" + 
+            colors.getReset());
     }
 }

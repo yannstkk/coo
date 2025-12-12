@@ -141,39 +141,29 @@ public class Simulation {
 
                     if (slot.getIsOccupied()) {
                         Vehicule v = slot.getActualVehicule();
-                        if (v.getLocationNb() > 5 && v.getVehiculeState() instanceof ParkedState) {
+                        if (v.getLocationNb() >=6 && v.getVehiculeState() instanceof ParkedState) {
 
                             System.out.println(
                                     "Velo dont l'ID est " + v.getId() + " se trouvant dans la station " + s.getId()
                                             + " : vient d'avoir " + v.getLocationNb() + " il vas donc en reparation ");
                             v.setState(new UnderRepairState(v));
 
-                            v.setRepairIntervalsRemaining(1);
+                            v.setRepairIntervalsRemaining(2);
                             repairTriggered = true;
 
                         } // dans un cycle le velo est mis en raparation ensuite dans le cycle suivant il
                           // est effectivement reparer
 
                         else if (v.getVehiculeState() instanceof UnderRepairState) {
-
-                            int remaining = v.getRepairIntervalsRemaining();
-
-                            // System.out.println("le Velo dont l'ID " + v.getId() + " se trouvant dans la
-                            // station " + s.getId() + " : Temps de réparation restant = " + remaining);
-                            if (remaining > 0) {
-                                v.setRepairIntervalsRemaining(remaining - 1);
+                            v.accept(technician);
+                            
+                            if (v.getRepairIntervalsRemaining() == 0) {
+                                System.out.println("Velo dont l'ID est " + v.getId() + 
+                                                " se trouvant dans la station " + s.getId() + 
+                                                " est Réparé !");
                             }
-
-                            if (remaining <= 1) {
-
-                                technician.visit(v);
-
-                                System.out.println("Velo dont l'ID est " + v.getId() + " se trouvant dans la station "
-                                        + s.getId() + " est Réparé ! ");
-                            }
-
                             repairTriggered = true;
-                        }
+}
                     }
 
                 }
@@ -189,7 +179,7 @@ public class Simulation {
             cycle++;
 
             try {
-                Thread.sleep(20000);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

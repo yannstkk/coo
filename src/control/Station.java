@@ -161,49 +161,39 @@ public class Station {
     }
 
     public void verifyStolen() {
+    if (getNbOccupiedSlot() == 1) {
+        Slot slot = slotList.stream().filter(Slot::getIsOccupied).findFirst().orElse(null);
 
-        if (getNbOccupiedSlot() == 1) {
-            Slot slot = slotList.stream().filter(Slot::getIsOccupied).findFirst().orElse(null);
-            // cette ligne cherche et retourne le seul emplacement occupée restant dans la
-            // satation
+        if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
+            IntervalsOfTheft++;
 
-            if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
+            System.out.println(colors.getRed() + "la station dont l'id est " + id
+                    + " : vient d'avoir un velo rester seul pendant " + IntervalsOfTheft + " interval(s) de temps " +
+                    " le Compteur de vol a donc été incrementé, il vaut = " + IntervalsOfTheft + colors.getReset());
 
-                IntervalsOfTheft++;
+            if (IntervalsOfTheft >= 2) {
+                Vehicule v = slot.getActualVehicule();
+                System.out.println(colors.getRed() + "⚠️ la Station dont l'id est " + id
+                        + " vient de se faire voler le Vélo : " + v.getId() + " !" + colors.getReset());
 
-                System.out.println(colors.getRed() + "la station dont l'id est " + id
-                        + " : vient d'avoir un velo rester seul pendant 1 interval de temps " +
-                        " le Compteur de vol a donc été incrementé, il vaut = " + IntervalsOfTheft + colors.getReset());
-
-                if (IntervalsOfTheft >= 2) {
-
-                    Vehicule v = slot.getActualVehicule();
-                    System.out.println(colors.getRed() + "la Station dont l'id est " + id
-                            + " vient de se faire volé Vélo : " + v.getId() + " !" + colors.getReset());
-
-                    v.setState(new StolenState(v));
-                    slot.setActualVehicule(null);
-                    slot.setIsOccupied(false);
-                    notifyObservers("stolen");
-                    IntervalsOfTheft = 0;
-
-                }
-
-            } else {
+                v.setState(new StolenState(v));
+                slot.setActualVehicule(null);
+                slot.setIsOccupied(false);
+                notifyObservers("stolen");
                 IntervalsOfTheft = 0;
-
-                System.out.println(colors.getPurple() + "Station dont l'id est " + id
-                        + " : a un Vélo seul mais pas geré (a été retiré ), pas de vol possible." + colors.getReset());
             }
         } else {
-
+            // Vélo pas garé (en cours de retrait), pas de vol possible
             IntervalsOfTheft = 0;
-
-            System.out.println(colors.getPurple() + "Station dont l'id est " + id + " a " + getNbOccupiedSlot()
-                    + " emplacement occupé elle n'est donc pas élegible au vole" + colors.getReset());
         }
-    }// ici les intervales de temps son successif, c'est pour ca qu'on remet direct a
-     // 0
+    } else if (getNbOccupiedSlot() == 0) {
+        // Station vide, réinitialiser le compteur
+        IntervalsOfTheft = 0;
+    } else {
+        // Plus d'un vélo, pas de risque de vol
+        IntervalsOfTheft = 0;
+    }
+}
 
     public void incrementEmptyFullCounters() {
 
