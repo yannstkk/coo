@@ -26,25 +26,7 @@ public class ControlCenter implements Observer {
         // Le système fonctionne en silence
     }
 
-    public void checkAndRedistribute() {
-        List<Station> stationsToRedistribute = new java.util.ArrayList<>();
-
-        for (Station s : stations) {
-            if (s.needsRedistribution()) {
-                stationsToRedistribute.add(s);
-            }
-        }
-
-        if (!stationsToRedistribute.isEmpty()) {
-            List<Integer> stationIds = stationsToRedistribute.stream()
-                .map(s -> s.getId())
-                .toList();
-            
-            System.out.println("  " + colors.getOrange() + "Redistribution automatique : Stations " + 
-                stationIds + colors.getReset());
-            
-            distributionStrategy.distribute(stations);
-            System.out.println();
-        }
+    public Distribution getDistributionStrategy() {
+        return distributionStrategy;
     }
 }

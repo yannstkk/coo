@@ -24,10 +24,8 @@ public class Simulation {
     private ControlCenter controlCenter;
     private Random random = new Random();
     private Technician technician = new Technician();
-    private int nextVehiculeId = 0;
     private Colors colors = new Colors();
     
-    // Constantes pour le forçage d'événements - Cycle de 15
     private static final int CYCLE_PERIOD = 15;
 
     public Simulation() {
@@ -51,7 +49,7 @@ public class Simulation {
                     v = new Basket(v); 
                 }
 
-                s.parkVehicule(v); // Version sans message pour l'initialisation
+                s.parkVehicule(v);
             }
         }
 
@@ -62,7 +60,6 @@ public class Simulation {
 
         controlCenter = new ControlCenter(stations, distributionStrategy);
         
-        // Affichage initial élégant
         printHeader("INITIALISATION DU SYSTEME");
         System.out.println();
         for (Station s : stations) {
@@ -85,6 +82,7 @@ public class Simulation {
             System.out.println();
 
             Set<User> alreadyActed = new HashSet<>();
+            Set<Integer> alreadyUsedVehicleIds = new HashSet<>();  // CHANGEMENT: Set d'IDs
             List<String> actions = new ArrayList<>();
 
             for (int i = 0; i < numActions; i++) {
@@ -102,74 +100,92 @@ public class Simulation {
 
                 if (u.getRentedVehicule() == null) {
                     try {
-                        String action = u.rent(s);
-                        if (action != null) actions.add(action);
+                        String action = u.rent(s, alreadyUsedVehicleIds);  // Passer Set<Integer>
+                        if (action != null) {
+                            actions.add(action);
+                            if (u.getRentedVehicule() != null) {
+                                alreadyUsedVehicleIds.add(u.getRentedVehicule().getId());
+                            }
+                        }
                     } catch (IllegalStateException | CannotParkException e) {
-                        e.printStackTrace();
+                        // Action échouée, continuer
                     }
 
                 } else {
                     try {
+                        int vehiculeIdBeingParked = u.getRentedVehicule().getId();
                         String action = u.park(s);
-                        if (action != null) actions.add(action);
+                        if (action != null) {
+                            actions.add(action);
+                            alreadyUsedVehicleIds.add(vehiculeIdBeingParked);
+                        }
                     } catch (CannotParkException e) {
-                        e.printStackTrace();
+                        // Action échouée, continuer
                     }
                 }
             }
 
-            // Affichage des actions
-            for (String action : actions) {
-                System.out.println("  " + action);
-            }
-            
             if (!actions.isEmpty()) {
+                for (String action : actions) {
+                    System.out.println("  " + action);
+                }
                 System.out.println();
             }
 
-            // Vérifications AVANT les forçages pour que les compteurs naturels fonctionnent
+            // Forçages d'événements
+            try {
+                if ((cycle - 6) % 15 == 0 && cycle >= 6) {
+                    forceTheft(cycle);
+                }
+                
+                if ((cycle - 13) % 15 == 0 && cycle >= 13) {
+                    forceRepair(cycle);
+                }
+                
+                if ((cycle - 20) % 15 == 0 && cycle >= 20) {
+                    forceRedistribution(cycle);
+                }
+            } catch (Exception e) {
+                System.err.println("  " + colors.getRed() + "Erreur lors d'un scénario forcé : " + 
+                    e.getMessage() + colors.getReset());
+                e.printStackTrace();
+            }
+
+            // Vérifications naturelles de vol
             List<String> theftMessages = new ArrayList<>();
-            for (Station s : stations) {
-                String msg = s.verifyStolen();
+            for (Station st : stations) {
+                String msg = st.verifyStolen();
                 if (msg != null) theftMessages.add(msg);
             }
 
-            // Forçages d'événements
-            // Pattern : Cycle 6, 21, 36... (vol) | Cycle 13, 28, 43... (réparation) | Cycle 20, 35, 50... (redistribution)
-            if ((cycle - 6) % 15 == 0 && cycle >= 6) {
-                forceTheft(cycle);
-            }
-            
-            if ((cycle - 13) % 15 == 0 && cycle >= 13) {
-                forceRepair(cycle);
-            }
-            
-            if ((cycle - 20) % 15 == 0 && cycle >= 20) {
-                forceRedistribution(cycle);
-            }
-
-            // Affichage des vols (naturels ou forcés)
             for (String msg : theftMessages) {
                 System.out.println("  " + msg);
             }
             if (!theftMessages.isEmpty()) System.out.println();
 
-            for (Station s : stations) {
-                s.incrementEmptyFullCounters();
+            printStationsStatus();
+
+            for (Station st : stations) {
+                st.incrementEmptyFullCounters();
             }
 
-            controlCenter.checkAndRedistribute();
+            boolean redistributionOccurred = checkAndRedistribute();
+            
+            if (redistributionOccurred) {
+                System.out.println("  " + colors.getBlue() + "État après redistribution :" + colors.getReset());
+                printStationsStatusCompact();
+            }
 
             // Réparations
             List<String> repairMessages = new ArrayList<>();
 
-            for (Station s : stations) {
-                for (Slot slot : s.getSlotList()) {
+            for (Station st : stations) {
+                for (Slot slot : st.getSlotList()) {
                     if (slot.getIsOccupied()) {
                         Vehicule v = slot.getActualVehicule();
                         if (v.getLocationNb() >= 6 && v.getVehiculeState() instanceof ParkedState) {
                             repairMessages.add(colors.getOrange() + "Vélo #" + v.getId() + 
-                                " (Station " + s.getId() + ") nécessite une réparation" + colors.getReset());
+                                " (Station " + st.getId() + ") nécessite une réparation" + colors.getReset());
                             v.setState(new UnderRepairState(v));
                             v.setRepairIntervalsRemaining(2);
                         } 
@@ -178,7 +194,7 @@ public class Simulation {
                             
                             if (v.getRepairIntervalsRemaining() == 0) {
                                 repairMessages.add(colors.getGreen() + "Vélo #" + v.getId() + 
-                                    " (Station " + s.getId() + ") réparé avec succès" + colors.getReset());
+                                    " (Station " + st.getId() + ") réparé avec succès" + colors.getReset());
                             }
                         }
                     }
@@ -190,9 +206,6 @@ public class Simulation {
             }
             if (!repairMessages.isEmpty()) System.out.println();
 
-            // État des stations
-            printStationsStatus();
-            
             printCycleFooter(cycle);
 
             cycle++;
@@ -203,6 +216,30 @@ public class Simulation {
                 e.printStackTrace();
             }
         }
+    }
+
+    private boolean checkAndRedistribute() {
+        List<Station> stationsToRedistribute = new java.util.ArrayList<>();
+
+        for (Station s : stations) {
+            if (s.needsRedistribution()) {
+                stationsToRedistribute.add(s);
+            }
+        }
+
+        if (!stationsToRedistribute.isEmpty()) {
+            List<Integer> stationIds = stationsToRedistribute.stream()
+                .map(s -> s.getId())
+                .toList();
+            
+            System.out.println("  " + colors.getOrange() + "Redistribution automatique : Stations " + 
+                stationIds + colors.getReset());
+            
+            controlCenter.getDistributionStrategy().distribute(stations);
+            System.out.println();
+            return true;
+        }
+        return false;
     }
 
     private void forceTheft(int cycle) {
@@ -217,30 +254,55 @@ public class Simulation {
         }
         
         if (targetStation == null) {
-            System.out.println("  " + colors.getRed() + "Impossible d'isoler un vélo" + colors.getReset());
+            System.out.println("  " + colors.getRed() + "Impossible d'isoler un vélo (pas assez de vélos)" + colors.getReset());
             System.out.println();
             return;
         }
         
-        List<Vehicule> removed = new ArrayList<>();
+        List<VehiculeTransfer> transfers = new ArrayList<>();
+        List<Vehicule> toMove = new ArrayList<>();
+        
+        // Collecter tous les vélos sauf un
         while (targetStation.getNbOccupiedSlot() > 1) {
             Vehicule v = targetStation.removeVehiculeForRedistribution();
             if (v != null) {
-                removed.add(v);
+                toMove.add(v);
+            } else {
+                break;
             }
         }
         
-        for (Vehicule v : removed) {
+        // Déplacer les vélos collectés
+        for (Vehicule v : toMove) {
+            boolean placed = false;
             for (Station s : stations) {
                 if (s.getId() != targetStation.getId() && !s.isFull()) {
                     s.parkVehicule(v);
+                    transfers.add(new VehiculeTransfer(v.getId(), targetStation.getId(), s.getId()));
+                    placed = true;
                     break;
                 }
             }
+            if (!placed) {
+                // Remettre le vélo si impossible de le placer
+                targetStation.parkVehicule(v);
+                System.err.println("  " + colors.getRed() + "Attention : Vélo #" + v.getId() + 
+                    " n'a pas pu être déplacé" + colors.getReset());
+            }
         }
         
-        System.out.println("  " + colors.getPurple() + "Station " + targetStation.getId() + 
-            " : isolation d'un vélo (" + removed.size() + " vélos déplacés)" + colors.getReset());
+        if (transfers.isEmpty()) {
+            System.out.println("  " + colors.getRed() + "Impossible d'isoler un vélo (pas assez d'espace)" + colors.getReset());
+        } else {
+            System.out.println("  " + colors.getPurple() + "Station " + targetStation.getId() + 
+                " : isolation d'un vélo (" + transfers.size() + " vélos déplacés)" + colors.getReset());
+            
+            for (VehiculeTransfer t : transfers) {
+                System.out.println("    → Vélo #" + t.vehiculeId + " : Station " + 
+                    t.fromStation + " → Station " + t.toStation);
+            }
+        }
+        
         System.out.println();
     }
 
@@ -262,7 +324,7 @@ public class Simulation {
         }
         
         if (targetVehicule == null) {
-            System.out.println("  " + colors.getRed() + "Aucun vélo disponible" + colors.getReset());
+            System.out.println("  " + colors.getRed() + "Aucun vélo disponible pour réparation" + colors.getReset());
             System.out.println();
             return;
         }
@@ -292,7 +354,7 @@ public class Simulation {
             }
             
             if (targetStation == null) {
-                System.out.println("  " + colors.getRed() + "Toutes les stations sont vides" + colors.getReset());
+                System.out.println("  " + colors.getRed() + "Toutes les stations sont déjà vides" + colors.getReset());
                 System.out.println();
                 return;
             }
@@ -302,20 +364,27 @@ public class Simulation {
                 Vehicule v = targetStation.removeVehiculeForRedistribution();
                 if (v != null) {
                     removed.add(v);
+                } else {
+                    break;
                 }
             }
             
             for (Vehicule v : removed) {
+                boolean placed = false;
                 for (Station s : stations) {
                     if (s.getId() != targetStation.getId() && !s.isFull()) {
                         s.parkVehicule(v);
+                        placed = true;
                         break;
                     }
+                }
+                if (!placed) {
+                    targetStation.parkVehicule(v);
                 }
             }
             
             System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
-                " vidée complètement (" + removed.size() + " vélos redistribués)" + colors.getReset());
+                " vidée (" + removed.size() + " vélos redistribués)" + colors.getReset());
             
         } else {
             Station targetStation = null;
@@ -327,7 +396,7 @@ public class Simulation {
             }
             
             if (targetStation == null) {
-                System.out.println("  " + colors.getRed() + "Impossible de remplir une station" + colors.getReset());
+                System.out.println("  " + colors.getRed() + "Aucune station ne peut être remplie" + colors.getReset());
                 System.out.println();
                 return;
             }
@@ -341,17 +410,21 @@ public class Simulation {
                         Vehicule v = s.removeVehiculeForRedistribution();
                         if (v != null) {
                             toMove.add(v);
+                        } else {
+                            break;
                         }
                     }
                 }
             }
             
             for (Vehicule v : toMove) {
-                targetStation.parkVehicule(v);
+                if (!targetStation.isFull()) {
+                    targetStation.parkVehicule(v);
+                }
             }
             
             System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
-                " remplie au maximum (" + toMove.size() + " vélos ajoutés)" + colors.getReset());
+                " remplie (" + toMove.size() + " vélos ajoutés)" + colors.getReset());
         }
         
         System.out.println();
@@ -408,6 +481,16 @@ public class Simulation {
         System.out.println();
     }
 
+    private void printStationsStatusCompact() {
+        for (Station s : stations) {
+            int occupied = s.getNbOccupiedSlot();
+            int capacity = s.getCapacity();
+            String bar = generateBar(occupied, capacity);
+            System.out.println("    Station " + s.getId() + " : " + bar + " " + occupied + "/" + capacity);
+        }
+        System.out.println();
+    }
+
     private String generateBar(int current, int max) {
         int barLength = 20;
         int filled = (int) ((double) current / max * barLength);
@@ -423,5 +506,17 @@ public class Simulation {
         bar.append(colors.getBlue() + "]" + colors.getReset());
         
         return bar.toString();
+    }
+
+    private static class VehiculeTransfer {
+        int vehiculeId;
+        int fromStation;
+        int toStation;
+        
+        VehiculeTransfer(int vehiculeId, int fromStation, int toStation) {
+            this.vehiculeId = vehiculeId;
+            this.fromStation = fromStation;
+            this.toStation = toStation;
+        }
     }
 }

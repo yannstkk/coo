@@ -123,6 +123,41 @@ public class Station {
         }
         return null;
     }
+    
+    // Nouvelle méthode pour louer un vélo SPÉCIFIQUE
+    public String rentSpecificVehicule(Vehicule vehicule) {
+        if (vehicule == null) return null;
+        
+        for (Slot slot : slotList) {
+            if (slot.getIsOccupied() && 
+                slot.getActualVehicule() == vehicule &&
+                vehicule.getVehiculeState() instanceof ParkedState) {
+                
+                slot.setActualVehicule(null);
+                slot.setIsOccupied(false);
+                vehicule.setState(new InUseState(vehicule));
+                vehicule.incrementLocationNb();
+
+                notifyObservers("rent");
+                resetCountersIfChanged();
+                
+                return colors.getBlue() + "Vélo #" + vehicule.getId() + 
+                    " loué depuis la Station " + this.id + 
+                    " (" + vehicule.getLocationNb() + " location(s))" + colors.getReset();
+            }
+        }
+        return null;
+    }
+
+    // Méthode pour récupérer UN vélo spécifique disponible (pour le rent avec filtre)
+    public Vehicule getFirstAvailableVehicule() {
+        for (Slot slot : slotList) {
+            if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
+                return slot.getActualVehicule();
+            }
+        }
+        return null;
+    }
 
     public Vehicule removeVehiculeForRedistribution() {
         if (!isEmpty()) {
@@ -147,7 +182,7 @@ public class Station {
             if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
                 IntervalsOfTheft++;
 
-                if (IntervalsOfTheft >= 2) {
+                if (IntervalsOfTheft >= 3) {  // CORRECTION: >= 3 au lieu de >= 2
                     Vehicule v = slot.getActualVehicule();
                     
                     v.setState(new StolenState(v));
@@ -160,11 +195,9 @@ public class Station {
                         " volé à la Station " + id + colors.getReset();
                 }
             } else {
-                // Vélo pas garé (en réparation ou autre), pas de vol possible
                 IntervalsOfTheft = 0;
             }
         } else {
-            // Plus d'un vélo ou station vide
             IntervalsOfTheft = 0;
         }
         return null;
@@ -185,7 +218,7 @@ public class Station {
     }
 
     public boolean needsRedistribution() {
-        return emptyIntervals > 2 || fullIntervals > 2;
+        return emptyIntervals >= 3 || fullIntervals >= 3;  // CORRECTION: >= 3 au lieu de > 2
     }
 
     public int getOccupiedCount() {

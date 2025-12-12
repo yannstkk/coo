@@ -1,5 +1,7 @@
 package control;
 
+import java.util.Set;
+
 import control.strategy.Slot;
 import exceptions.CannotParkException;
 import vehicle.Vehicule;
@@ -20,15 +22,31 @@ public class User {
     }
 
     public String rent(Station station) throws CannotParkException {
+        return rent(station, null);
+    }
+
+    // CHANGEMENT: Accepte maintenant Set<Integer> au lieu de Set<Vehicule>
+    public String rent(Station station, Set<Integer> alreadyUsedVehicleIds) throws CannotParkException {
         if (rentedVehicule != null || station.isEmpty()) {
             return null;
         }
         
         // Trouver un vélo disponible
         Vehicule vehicule = null;
+        
+        // Parcourir TOUS les vélos de la station
         for (Slot slot : station.getSlotList()) {
             if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
-                vehicule = slot.getActualVehicule();
+                Vehicule candidate = slot.getActualVehicule();
+                
+                // Vérifier si ce vélo n'a PAS déjà été utilisé ce cycle (par son ID)
+                if (alreadyUsedVehicleIds != null && alreadyUsedVehicleIds.contains(candidate.getId())) {
+                    // Ce vélo a déjà été utilisé ce cycle, passer au suivant
+                    continue;
+                }
+                
+                // Vélo disponible trouvé
+                vehicule = candidate;
                 break;
             }
         }
@@ -41,11 +59,11 @@ public class User {
         
         if (this.balance >= price) {
             this.balance -= price;
-            String result = station.rentVehicule();
+            // CORRECTION CRITIQUE : Louer le vélo SPÉCIFIQUE qu'on a trouvé
+            String result = station.rentSpecificVehicule(vehicule);
             this.rentedVehicule = vehicule;
             return result;
         } else {
-            // Pas assez d'argent
             return null;
         }
     }
@@ -53,7 +71,9 @@ public class User {
     public String park(Station s) throws CannotParkException {
         if (rentedVehicule != null && !s.isFull()) {
             String result = s.parkVehiculeWithMessage(rentedVehicule);
-            this.rentedVehicule = null;
+            if (result != null) {
+                this.rentedVehicule = null;
+            }
             return result;
         }
         return null;
