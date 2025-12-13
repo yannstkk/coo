@@ -124,7 +124,6 @@ public class Station {
         return null;
     }
     
-    // Nouvelle méthode pour louer un vélo SPÉCIFIQUE
     public String rentSpecificVehicule(Vehicule vehicule) {
         if (vehicule == null) return null;
         
@@ -149,7 +148,6 @@ public class Station {
         return null;
     }
 
-    // Méthode pour récupérer UN vélo spécifique disponible (pour le rent avec filtre)
     public Vehicule getFirstAvailableVehicule() {
         for (Slot slot : slotList) {
             if (slot.getIsOccupied() && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {

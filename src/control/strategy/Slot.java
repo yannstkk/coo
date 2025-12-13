@@ -13,7 +13,6 @@ public class Slot {
         this.actualVehicule = null;
     }
 
-    // Getters/setters
     public int getNum() {
         return num;
     }

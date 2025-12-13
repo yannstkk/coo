@@ -9,7 +9,6 @@ public class ControlCenter implements Observer {
 
     private List<Station> stations;
     private Distribution distributionStrategy;
-    private Colors colors = new Colors();
 
     public ControlCenter(List<Station> stations, Distribution distributionStrategy) {
         this.stations = stations;
@@ -22,7 +21,7 @@ public class ControlCenter implements Observer {
 
     @Override
     public void update(Station station, String action) {
-        // Désactiver les notifications répétitives
+        // on a désactiver les notifications répétitives car ca fait trop de bruit
         // Le système fonctionne en silence
     }
 
