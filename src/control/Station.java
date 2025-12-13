@@ -182,7 +182,7 @@ public class Station {
             if (slot != null && slot.getActualVehicule().getVehiculeState() instanceof ParkedState) {
                 IntervalsOfTheft++;
 
-                if (IntervalsOfTheft >= 3) {  // CORRECTION: >= 3 au lieu de >= 2
+                if (IntervalsOfTheft >= 2) {  
                     Vehicule v = slot.getActualVehicule();
                     
                     v.setState(new StolenState(v));
@@ -218,7 +218,7 @@ public class Station {
     }
 
     public boolean needsRedistribution() {
-        return emptyIntervals >= 3 || fullIntervals >= 3;  // CORRECTION: >= 3 au lieu de > 2
+        return emptyIntervals >= 2 || fullIntervals >= 2;  
     }
 
     public int getOccupiedCount() {

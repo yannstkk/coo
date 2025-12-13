@@ -78,8 +78,8 @@ public class Simulation {
             printCycleHeader(cycle);
 
             int numActions = random.nextInt(5) + 1;
-            System.out.println("  " + colors.getGreen() + numActions + " action(s) générée(s)" + colors.getReset());
-            System.out.println();
+            // System.out.println("  " + colors.getGreen() + numActions + " action(s) générée(s)" + colors.getReset());
+            // System.out.println();
 
             Set<User> alreadyActed = new HashSet<>();
             Set<Integer> alreadyUsedVehicleIds = new HashSet<>();  // CHANGEMENT: Set d'IDs
@@ -126,23 +126,31 @@ public class Simulation {
             }
 
             if (!actions.isEmpty()) {
+                System.out.println("  " + colors.getGreen() + actions.size() + " action(s) effectuée(s)" + colors.getReset());
+                System.out.println();
                 for (String action : actions) {
                     System.out.println("  " + action);
                 }
+                System.out.println();
+            } else {
+                System.out.println("  " + colors.getYellow() + "Aucune action n'a pu être effectuée" + colors.getReset());
                 System.out.println();
             }
 
             // Forçages d'événements
             try {
-                if ((cycle - 6) % 15 == 0 && cycle >= 6) {
+                // Vol : cycle 6, puis tous les 21 cycles
+                if (cycle >= 6 && (cycle - 6) % 21 == 0) {
                     forceTheft(cycle);
                 }
                 
-                if ((cycle - 13) % 15 == 0 && cycle >= 13) {
+                // Réparation : cycle 13, puis tous les 21 cycles
+                if (cycle >= 13 && (cycle - 13) % 21 == 0) {
                     forceRepair(cycle);
                 }
                 
-                if ((cycle - 20) % 15 == 0 && cycle >= 20) {
+                // Redistribution : cycle 20, puis tous les 21 cycles
+                if (cycle >= 20 && (cycle - 20) % 21 == 0) {
                     forceRedistribution(cycle);
                 }
             } catch (Exception e) {
@@ -338,75 +346,101 @@ public class Simulation {
         System.out.println();
     }
 
+
+
+
+
+
     private void forceRedistribution(int cycle) {
-        System.out.println("  " + colors.getOrange() + "[SCENARIO FORCE] Simulation d'une redistribution" + colors.getReset());
+    System.out.println("  " + colors.getOrange() + "[SCENARIO FORCE] Simulation d'une redistribution" + colors.getReset());
+    
+    int redistributionNumber = (cycle - 20) / 21;
+    boolean shouldEmpty = redistributionNumber % 2 == 0;
+    
+    if (shouldEmpty) {
+        // Vider complètement une station
+        Station targetStation = null;
+        for (Station s : stations) {
+            if (s.getNbOccupiedSlot() > 0) {
+                targetStation = s;
+                break;
+            }
+        }
         
-        int redistributionNumber = (cycle - 1) / CYCLE_PERIOD;
-        boolean shouldEmpty = redistributionNumber % 2 == 0;
+        if (targetStation == null) {
+            System.out.println("  " + colors.getRed() + "Toutes les stations sont déjà vides" + colors.getReset());
+            System.out.println();
+            return;
+        }
         
-        if (shouldEmpty) {
-            Station targetStation = null;
+        List<Vehicule> removed = new ArrayList<>();
+        while (targetStation.getNbOccupiedSlot() > 0) {
+            Vehicule v = targetStation.removeVehiculeForRedistribution();
+            if (v != null) {
+                removed.add(v);
+            } else {
+                break;
+            }
+        }
+        
+        for (Vehicule v : removed) {
+            boolean placed = false;
             for (Station s : stations) {
-                if (s.getNbOccupiedSlot() > 0) {
-                    targetStation = s;
+                if (s.getId() != targetStation.getId() && !s.isFull()) {
+                    s.parkVehicule(v);
+                    placed = true;
                     break;
                 }
             }
-            
-            if (targetStation == null) {
-                System.out.println("  " + colors.getRed() + "Toutes les stations sont déjà vides" + colors.getReset());
-                System.out.println();
-                return;
+            if (!placed) {
+                targetStation.parkVehicule(v);
             }
-            
-            List<Vehicule> removed = new ArrayList<>();
-            while (targetStation.getNbOccupiedSlot() > 0) {
-                Vehicule v = targetStation.removeVehiculeForRedistribution();
-                if (v != null) {
-                    removed.add(v);
-                } else {
-                    break;
-                }
+        }
+        
+        System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
+            " vidée (" + removed.size() + " vélos redistribués)" + colors.getReset());
+        
+    } else {
+        // Remplir COMPLÈTEMENT une station (à 100% de sa capacité)
+        Station targetStation = null;
+        for (Station s : stations) {
+            if (!s.isFull() && s.getNbOccupiedSlot() < s.getCapacity() - 3) {
+                targetStation = s;
+                break;
             }
-            
-            for (Vehicule v : removed) {
-                boolean placed = false;
-                for (Station s : stations) {
-                    if (s.getId() != targetStation.getId() && !s.isFull()) {
-                        s.parkVehicule(v);
-                        placed = true;
+        }
+        
+        if (targetStation == null) {
+            System.out.println("  " + colors.getRed() + "Aucune station ne peut être remplie" + colors.getReset());
+            System.out.println();
+            return;
+        }
+        
+        // Calculer combien de vélos sont nécessaires pour remplir COMPLÈTEMENT
+        int needed = targetStation.getCapacity() - targetStation.getNbOccupiedSlot();
+        List<Vehicule> toMove = new ArrayList<>();
+        
+        // PHASE 1 : Collecter depuis les autres stations (en gardant au moins 2 vélos par station)
+        for (Station s : stations) {
+            if (s.getId() != targetStation.getId() && toMove.size() < needed) {
+                // Prendre des vélos tout en gardant au moins 2 vélos dans la station source
+                while (s.getNbOccupiedSlot() > 2 && toMove.size() < needed) {
+                    Vehicule v = s.removeVehiculeForRedistribution();
+                    if (v != null) {
+                        toMove.add(v);
+                    } else {
                         break;
                     }
                 }
-                if (!placed) {
-                    targetStation.parkVehicule(v);
-                }
             }
-            
-            System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
-                " vidée (" + removed.size() + " vélos redistribués)" + colors.getReset());
-            
-        } else {
-            Station targetStation = null;
-            for (Station s : stations) {
-                if (!s.isFull() && s.getNbOccupiedSlot() < s.getCapacity() - 3) {
-                    targetStation = s;
-                    break;
-                }
-            }
-            
-            if (targetStation == null) {
-                System.out.println("  " + colors.getRed() + "Aucune station ne peut être remplie" + colors.getReset());
-                System.out.println();
-                return;
-            }
-            
-            List<Vehicule> toMove = new ArrayList<>();
-            int needed = targetStation.getCapacity() - targetStation.getNbOccupiedSlot();
-            
+        }
+        
+        // PHASE 2 : Si pas assez de vélos, prendre TOUS les vélos des autres stations
+        if (toMove.size() < needed) {
             for (Station s : stations) {
                 if (s.getId() != targetStation.getId() && toMove.size() < needed) {
-                    while (s.getNbOccupiedSlot() > 2 && toMove.size() < needed) {
+                    // Cette fois, prendre TOUS les vélos restants
+                    while (s.getNbOccupiedSlot() > 0 && toMove.size() < needed) {
                         Vehicule v = s.removeVehiculeForRedistribution();
                         if (v != null) {
                             toMove.add(v);
@@ -416,19 +450,27 @@ public class Simulation {
                     }
                 }
             }
-            
-            for (Vehicule v : toMove) {
-                if (!targetStation.isFull()) {
-                    targetStation.parkVehicule(v);
-                }
-            }
-            
-            System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
-                " remplie (" + toMove.size() + " vélos ajoutés)" + colors.getReset());
         }
         
-        System.out.println();
+        // Ajouter tous les vélos collectés à la station cible
+        for (Vehicule v : toMove) {
+            if (!targetStation.isFull()) {
+                targetStation.parkVehicule(v);
+            }
+        }
+        
+        // Message selon si on a réussi à remplir complètement ou non
+        if (targetStation.isFull()) {
+            System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
+                " remplie complètement (" + toMove.size() + " vélos ajoutés)" + colors.getReset());
+        } else {
+            System.out.println("  " + colors.getOrange() + "Station " + targetStation.getId() + 
+                " remplie partiellement (" + toMove.size() + " vélos ajoutés, capacité insuffisante)" + colors.getReset());
+        }
     }
+    
+    System.out.println();
+}
 
     private void printHeader(String title) {
         System.out.println("\n" + colors.getYellow() + "╔════════════════════════════════════════════════════════════╗" + colors.getReset());
