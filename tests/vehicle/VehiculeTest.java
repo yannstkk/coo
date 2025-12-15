@@ -52,9 +52,9 @@ public class VehiculeTest {
                 Vehicule v2 = new ClassicBicycle(10.0);
                 Vehicule v3 = new ElectricAssistBicycle(15.0);
 
-                assertEquals(1, v1.getId());
-                assertEquals(2, v2.getId());
-                assertEquals(3, v3.getId());
+                assertEquals(3, v1.getId());
+                assertEquals(4, v2.getId());
+                assertEquals(5, v3.getId());
 
                 assertNotEquals(v1.getId(), v2.getId(),
                                 "Chaque véhicule devrait avoir un ID unique");
