@@ -12,10 +12,7 @@ import vehicle.state.ParkedState;
 import vehicle.state.UnderRepairState;
 import vehicle.state.InUseState;
 
-/**
- * Tests pour vérifier le comportement du Technicien
- * lors de la réparation des véhicules
- */
+
 public class TechnicianTest {
 
         private Technician technician;

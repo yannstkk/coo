@@ -14,7 +14,6 @@ import exceptions.CannotParkException;
 import vehicle.ClassicBicycle;
 import vehicle.Vehicule;
 import vehicle.state.InUseState;
-import vehicle.state.StolenState;
 import vehicle.state.UnderRepairState;
 
 public class RandomDistributionTest {

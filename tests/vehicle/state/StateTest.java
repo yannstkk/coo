@@ -11,10 +11,7 @@ import vehicle.state.InUseState;
 import vehicle.state.UnderRepairState;
 import vehicle.state.StolenState;
 
-/**
- * Tests pour vérifier les transitions d'états des véhicules
- * et les règles métier associées à chaque état
- */
+
 
 public class StateTest {
 

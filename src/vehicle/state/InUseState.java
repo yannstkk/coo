@@ -51,7 +51,7 @@ public class InUseState extends VehiculeState {
      */
     @Override
     public void parked() {
-        if (this.vehicule.getLocationNb() == 5) {
+        if (this.vehicule.getLocationNb() >= 5) {
             this.vehicule.setRepairIntervalsRemaining(2);
             this.vehicule.setState(new UnderRepairState(vehicule));
         } else {

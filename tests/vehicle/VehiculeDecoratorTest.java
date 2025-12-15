@@ -13,10 +13,7 @@ import vehicle.accessory.Basket;
 import vehicle.accessory.LuggageRack;
 import vehicle.state.ParkedState;
 
-/**
- * Tests pour vérifier le pattern Decorator appliqué aux véhicules
- * avec les accessoires Basket et LuggageRack
- */
+
 public class VehiculeDecoratorTest {
 
     private ClassicBicycle baseBike;

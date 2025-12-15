@@ -167,3 +167,89 @@ The technician visits each vehicle to perform maintenance.
 --
 
 ## Simulation
+
+
+
+
+
+
+
+
+## HowTo
+
+### Prerequisites
+- Java 8 minimum
+- JUnit 5 (JAR files in `lib/` directory)
+
+### Retrieving the Project
+git clone https://gitlab-etu.fil.univ-lille.fr/yani.zaidi.etu/projet_velib.git
+cd projet_velib
+
+
+
+### Compiling the Sources
+# From the project root directory
+
+# Linux
+javac -d out/ -sourcepath src/ src/App.java src/**/*.java
+
+# Windows
+javac -d out/ -sourcepath src/ src/App.java
+
+
+### Running the Program
+
+# From the project root directory
+cd out/
+java App roundrobin    # With Round Robin strategy
+# OR
+java App random        # With Random strategy
+
+
+**Note:** The program runs in an infinite loop with a 1000ms pause between cycles. Stop with `Ctrl+C`.
+
+
+
+### Compiling the Tests
+
+**Linux/macOS:**
+
+
+# First compile sources if not already done
+javac -d out/ -sourcepath src/ src/App.java
+
+# Then compile tests
+javac -d out/ -cp "lib/junit-platform-console-standalone-1.13.0-M3.jar:out" -sourcepath "src:tests" $(find tests -name "*.java")
+
+
+**Windows PowerShell:**
+
+# First compile sources if not already done
+javac -d out/ -sourcepath src/ src/App.java
+
+# Then compile tests 
+javac -d out/ -cp "lib\junit-platform-console-standalone-1.13.0-M3.jar;out" -sourcepath "src;tests" (Get-ChildItem -Path tests -Recurse -Filter *.java).FullName
+
+
+
+### Running the Tests
+
+**Linux/macOS:**
+
+# Run all tests
+java -jar lib/junit-platform-console-standalone-1.13.0-M3.jar --class-path out --scan-class-path
+
+# Or run a specific test class, example:
+java -jar lib/junit-platform-console-standalone-1.13.0-M3.jar --class-path out --select-class VehiculeTest
+
+
+**Windows PowerShell:**
+
+# Run all tests
+java -jar lib\junit-platform-console-standalone-1.13.0-M3.jar --class-path out --scan-class-path
+
+# Or run a specific test class, example :
+java -jar lib\junit-platform-console-standalone-1.13.0-M3.jar --class-path out --select-class VehiculeTest
+
+
+

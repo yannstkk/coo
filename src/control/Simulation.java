@@ -119,7 +119,7 @@ public class Simulation {
                 scenarioManager.forceRedistribution(stations, cycle);
             }
         } catch (Exception e) {
-            System.err.println(" Erreur lors d'un scénario forcé : " + e.getMessage());
+            System.err.println(" erreur lors d'un scenario forcé : " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -181,11 +181,11 @@ public class Simulation {
     }
 
     /**
-     * Pauses the simulation for 500 milliseconds between cycles
+     * Pauses the simulation for 1000 milliseconds between cycles
      */
     private void pause() {
         try {
-            Thread.sleep(500);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

@@ -11,10 +11,7 @@ import vehicle.state.ParkedState;
 import vehicle.state.UnderRepairState;
 import vehicle.state.StolenState;
 
-/**
- * Tests pour vérifier le comportement de base des véhicules
- * (création, états, compteurs, prix)
- */
+
 public class VehiculeTest {
 
         private ClassicBicycle classicBike;
