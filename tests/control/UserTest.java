@@ -17,7 +17,7 @@ public class UserTest {
     private Station station;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws CannotParkException {
 
         user = new User("Jean", "Dupont", 50.0);
         station = new Station(1, 10);

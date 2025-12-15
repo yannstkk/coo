@@ -1,93 +1,169 @@
-# projet_velib
+# Bike-Sharing Simulation System
 
+## Overview
 
+This system simulates a bike-sharing service with multiple stations, different types of vehicles (classic bikes and electric bikes with accessories), users, and redistribution strategies. The architecture relies on several design patterns that ensure flexibility, extensibility, and maintainability of the code.
 
-## Getting started
+## General Architecture
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The system is organized around a central `Simulation` class that orchestrates all components: stations, vehicles, users, control center, technician, and random generator. This modular architecture provides a clear separation of responsibilities and makes the system easier to evolve.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Implemented Design Patterns
 
-## Add your files
+### 1. Observer Pattern
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+**Problem addressed:**  
+How can stations automatically notify the control center when they require bike redistribution, without creating tight coupling between these components?
 
-```
-cd existing_repo
-git remote add origin https://gitlab-etu.fil.univ-lille.fr/yani.zaidi.etu/projet_velib.git
-git branch -M main
-git push -uf origin main
-```
+**Implementation:**
 
-## Integrate with your tools
+- **Stations** act as observable subjects (`Subject`)
+- The **ControlCenter** acts as an observer (`Observer`)
+- Stations notify the control center via `notifyObservers()` when users rent or return bikes
+- The control center registers itself with stations using `attach(Observer)`
 
-- [ ] [Set up project integrations](https://gitlab-etu.fil.univ-lille.fr/yani.zaidi.etu/projet_velib/-/settings/integrations)
+**Advantages:**
 
-## Collaborate with your team
+- Loose coupling between stations and the control center
+- Easy addition of new observers without modifying station code
+- Real-time automatic notifications of state changes
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+**Usage scenario:**  
+When a station becomes empty or overloaded for two consecutive time intervals, it automatically notifies the control center, which can then trigger a redistribution.
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+### 2. State Pattern
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+**Problem addressed:**  
+How can the different states of a vehicle (available, in use, under repair, stolen) and their transitions be managed efficiently without an explosion of `if/else` conditions?
 
-***
+**Implementation:**
 
-# Editing this README
+- State hierarchy: `VehicleState` (interface) with four concrete implementations:
+  - `ParkedState`: vehicle parked and available
+  - `InUseState`: vehicle currently rented
+  - `UnderRepairState`: vehicle under maintenance
+  - `StolenState`: vehicle reported stolen
+- Each state encapsulates behavior specific to that context
+- State transitions are handled by the state objects themselves
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+**Advantages:**
 
-## Suggestions for a good README
+- More readable and maintainable code (no nested conditionals)
+- Easy addition of new states without modifying existing code
+- Clear encapsulation of state-specific behavior
+- Explicit and controlled state transitions
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+**Usage scenario:**  
+When a user rents a bike, the vehicle automatically transitions from `ParkedState` to `InUseState`.  
+When the bike is returned to a station, if the number of rentals reaches a threshold (set to 5), the bike transitions to `UnderRepairState`; otherwise, it returns to `ParkedState`.  
+Invalid transitions throw an `IllegalStateException`.
 
-## Name
-Choose a self-explaining name for your project.
+---
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### 3. Strategy Pattern
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+**Problem addressed:**  
+How can different bike redistribution algorithms be used interchangeably without modifying the control center code?
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+**Implementation:**
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+- `Distribution` interface defining the contract `distribute(Station[])`
+- Concrete strategies:
+  - `RoundRobin`: sequential and fair distribution
+  - `RandomDistribution`: random distribution based on a generator
+- The `ControlCenter` delegates redistribution to the configured strategy
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+**Advantages:**
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+- Algorithm switching at runtime without recompilation
+- Easy addition of new strategies without changing existing code
+- Simplified unit testing of each strategy independently
+- Compliance with the Open/Closed Principle
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+**Usage scenario:**  
+The system can switch to a fair distribution strategy during peak hours and to a random strategy during off-peak hours.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+---
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### 4. Decorator Pattern
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+**Problem addressed:**  
+How can features (accessories) be added dynamically to vehicles without creating a combinatorial explosion of subclasses?
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+**Implementation:**
 
-## License
-For open source projects, say how it is licensed.
+- Abstract class `VehicleDecorator` that extends and wraps `Vehicle`
+- Concrete decorators:
+  - `Basket`: adds a front basket
+  - `LuggageRack`: adds a rear rack
+- Decorators can be stacked to combine multiple accessories
+- Each decorator adds its cost to the base price
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+**Advantages:**
+
+- Flexible runtime composition of accessories
+- Avoids creating classes such as `BicycleWithBasketAndRack`
+- Easy addition of new accessories without modifying existing vehicles
+- Respects the Single Responsibility Principle
+
+**Usage scenario:**  
+A classic bike can be equipped with a basket, a luggage rack, or both, with automatic calculation of the total price.
+
+---
+
+### 5. Visitor Pattern
+
+**Problem addressed:**  
+How can different operations (price calculation, maintenance) be performed on vehicles without modifying their classes while respecting the Open/Closed Principle?
+
+**Implementation:**
+
+- `Visitor` interface with the method `visit(Vehicle)`
+- Concrete visitors:
+  - `Technician` for maintenance operations
+- Vehicles accept visitors via `accept(Visitor)`
+
+**Advantages:**
+
+- New operations can be added without modifying vehicle classes
+- Business logic centralized in visitor classes
+- Double dispatch to select the correct operation
+- Facilitates cross-cutting functionality
+
+**Usage scenario:**  
+The technician visits each vehicle to perform maintenance.
+
+---
+
+## Pattern Interactions
+
+1. **Observer + Strategy**: The control center observes stations and uses a strategy to redistribute bikes
+2. **State + Visitor**: Visitors perform different operations depending on the vehicle state
+3. **Decorator + Visitor**: Visitors traverse the decorator chain to compute total prices
+
+---
+
+## System Extensibility
+
+- **New vehicle types**: extend the `Vehicle` class
+- **New states**: implement the `VehicleState` interface
+- **New accessories**: create new decorators
+- **New redistribution strategies**: implement the `Distribution` interface
+- **New operations**: create new visitors
+- **New observers**: implement the `Observer` interface
+
+---
+
+## SOLID Principles Respected
+
+- **Single Responsibility Principle**
+- **Open/Closed Principle**
+- **Liskov Substitution Principle**
+- **Interface Segregation Principle**
+- **Dependency Inversion Principle**
+
+--
+
+## Simulation

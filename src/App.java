@@ -2,9 +2,11 @@ import control.Simulation;
 import control.strategy.Distribution;
 import control.strategy.RandomDistribution;
 import control.strategy.RoundRobin;
+import exceptions.CannotParkException;
+import exceptions.IllegalStateException;
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws CannotParkException {
 
         if (args.length == 0) {
             System.err.println("Veuillez indiquer la stratégie en premier paramètre : round robin ou random");
@@ -24,6 +26,10 @@ public class App {
         }
 
         Simulation simulation = new Simulation(strategy);
-        simulation.runSimulation();
+        try {
+            simulation.runSimulation();
+        } catch (CannotParkException | IllegalStateException e) {
+            e.printStackTrace();
+        }
     }
 }

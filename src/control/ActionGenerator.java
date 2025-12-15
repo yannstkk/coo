@@ -14,13 +14,19 @@ import exceptions.CannotParkException;
  * (locations et retours de vélos)
  */
 public class ActionGenerator {
-    
-    private final Random random = new Random();
-    
 
+    private final Random random = new Random();
+
+    /**
+     * Generates random user actions (rentals and returns) for a simulation cycle
+     * 
+     * @param users    the list of users
+     * @param stations the list of stations
+     * @return list of action messages generated
+     */
     public List<String> generateActions(List<User> users, List<Station> stations) {
         int numActions = random.nextInt(5) + 1;
-        
+
         Set<User> alreadyActed = new HashSet<>();
         Set<Integer> alreadyUsedVehicleIds = new HashSet<>();
         List<String> actions = new ArrayList<>();
@@ -63,7 +69,7 @@ public class ActionGenerator {
                 }
             }
         }
-        
+
         return actions;
     }
 }
